@@ -6,6 +6,7 @@ return {
     ["spanish"] = {name = "Castellano", code = "es", articles = {singular = {masc = "el", fem = "la"}, plural = {masc = "los", fem = "las"}}},
     ["deutsch"] = {name = "Deutsche", code = "de"},
     ["russian"] = {name = "Русский", code = "ru"},
+    ["french"] = {name = "Français", code = "fr", articles = {singular = {masc = "le", fem = "la"}, plural = {masc = "les", fem = "les"}}}
 }
 
 --language codes can be found in https://cloud.google.com/translate/docs/languages
