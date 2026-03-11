@@ -7,6 +7,19 @@ local plurals_list = res.items_grammar
 local fixes = require("fixes")
 https.TIMEOUT = 0.5
 
+local cache_file = windower.addon_path .. 'translation_cache.json'
+local translation_cache = {}
+
+-- Charger le cache depuis le fichier
+local f = io.open(cache_file, "r")
+if f then
+    local content = f:read("*all")
+    f:close()
+    if content and content ~= "" then
+        translation_cache = json.decode(content) or {}
+    end
+end
+
 local inverted_glossary = {}
 for original, replacement in pairs(glossary) do
     inverted_glossary[replacement] = original
@@ -85,6 +98,14 @@ local function aply_fixes(text, language)
     return text
 end
 
+local function save_cache()
+    local f = io.open(cache_file, "w+")
+    if f then
+        f:write(json.encode(translation_cache))
+        f:close()
+    end
+end
+
 local function make_url(text, language)
     local modified_text = apply_colored_text(text)
     modified_text = apply_glossary(modified_text, glossary)
@@ -92,6 +113,13 @@ local function make_url(text, language)
 end
 
 function get_translation(text, language)
+
+    local cache_key = language.code .. ":" .. text
+
+    if translation_cache[cache_key] then
+        return translation_cache[cache_key]
+    end
+
     local url = make_url(text, language.code)
     local response_body = {}
     local success, status_code, headers, status_text = https.request{
@@ -125,5 +153,7 @@ function get_translation(text, language)
     final_text = adjust_articles_for_plurals(final_text, language.articles)
     final_text = aply_fixes(final_text, language.code)
 
+    translation_cache[cache_key] = final_text
+    save_cache()
     return final_text
 end
