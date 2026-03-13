@@ -137,10 +137,11 @@ return {
 
 ### 📜 Crédits / Credits
 
-Original addon: Hando
-Major modifications: Yuki and Ghosty
-Improvements from fork: KenshiDRK
-Additional improvements in this fork: DiableNoir
+- Original addon: Hando
+- Major modifications: Yuki and Ghosty
+- Improvements from fork: KenshiDRK
+- Additional improvements in this fork: DiableNoir
 
 Original repository: https://github.com/StarlitGhost/Balloon.git
+
 
