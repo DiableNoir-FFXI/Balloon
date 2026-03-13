@@ -74,15 +74,15 @@ return {
 
 ### ✨ Features
 
-NPC dialogue displayed as speech bubbles
-Custom themes
-Animated text display
-Character portraits
-Automatic translation
-Multi-language support
-Per-character balloons
-Interface scaling
-Translation cache system (added in this fork)
+- NPC dialogue displayed as speech bubbles
+- Custom themes
+- Animated text display
+- Character portraits
+- Automatic translation
+- Multi-language support
+- Per-character balloons
+- Interface scaling
+- Translation cache system (added in this fork)
 
 ### ⚙️ Main Commands
 ```text
@@ -143,5 +143,6 @@ return {
 - Additional improvements in this fork: DiableNoir
 
 Original repository: https://github.com/StarlitGhost/Balloon.git
+
 
 
