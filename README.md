@@ -36,10 +36,10 @@ Ce projet est un fork amélioré du projet original avec des fonctionnalités su
 //Bl language <langue> → Change la langue de traduction (voir languages.lua)
 ```
 Pour la traduction française avec ce fork :
-
+```text
 //Bl translate
 //Bl language french
-
+```
 La première bulle peut mettre un court instant à s’afficher à cause du cache, puis ce sera instantané.
 Si l’ordre n’est pas respecté, un reload de l’addon sera nécessaire.
 
@@ -50,21 +50,16 @@ Si l’ordre n’est pas respecté, un reload de l’addon sera nécessaire.
 Les thèmes se trouvent dans themes/
 
 Chaque thème peut contenir :
-
 Images des bulles
-
 Configuration du thème
-
 Portraits de personnages
 
 Bulles spécifiques à certains NPC :
-
 themes/<theme>/characters/<npc>.png
 
 Exemple : themes/ffxi/characters/Iroha.png
 
 La position des bulles peut être ajustée avec la souris.
-
 La touche Scroll Lock permet de masquer les bulles.
 
 ###🌐 Ajouter une nouvelle langue
@@ -74,28 +69,23 @@ Dans languages.lua, ajoutez une entrée pour votre langue. Exemple :
 return {
     ["french"] = {name = "Français", code = "fr"}
 }
+
 ##🇬🇧 English Version
+
 ###✨ Features
 
 NPC dialogue displayed as speech bubbles
-
 Custom themes
-
 Animated text display
-
 Character portraits
-
 Automatic translation
-
 Multi-language support
-
 Per-character balloons
-
 Interface scaling
-
 Translation cache system (added in this fork)
 
 ###⚙️ Main Commands
+```text
 //Bl             → Main command
 //Bl 0           → Normal mode (log only)
 //Bl 1           → Balloon display only
@@ -109,12 +99,12 @@ Translation cache system (added in this fork)
 //Bl portrait    → Toggle character portraits
 //Bl translate   → Toggle automatic translation
 //Bl language <language> → Change translation language (see languages.lua)
-
+```
 To use French translation with this fork:
-
+```text
 //Bl translate
 //Bl language french
-
+```
 The first balloon may take a very short moment due to caching, then it will be instant.
 Reload the addon if the order is not respected.
 
@@ -125,28 +115,25 @@ Reload the addon if the order is not respected.
 Themes are located in themes/
 
 Each theme can contain:
-
 Bubble images
-
 Theme configuration
-
 Character portraits
 
 Per-NPC balloons:
-
 themes/<theme>/characters/<npc>.png
 
 Example: themes/ffxi/characters/Iroha.png
 
 Bubble position adjustable with the mouse
-
 Scroll Lock hides bubbles
 
 ###🌐 Adding a New Language
 
 Add an entry in languages.lua. Example:
 
-["french"] = {name = "Français", code = "fr"}
+return {
+    ["french"] = {name = "Français", code = "fr"}
+}
 
 ###📜 Crédits / Credits
 
@@ -156,4 +143,3 @@ Improvements from fork: KenshiDRK
 Additional improvements in this fork: DiableNoir
 
 Original repository: https://github.com/StarlitGhost/Balloon.git
-
