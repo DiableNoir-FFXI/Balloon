@@ -45,7 +45,7 @@ Si l’ordre n’est pas respecté, un reload de l’addon sera nécessaire.
 
 ⚠️ Attention : certains addons Windower comme Eternity (et probablement FastCS) ne sont pas compatibles avec cette version de Balloon.
 
-🎨 Thèmes et Bulles
+###🎨 Thèmes et Bulles
 
 Les thèmes se trouvent dans themes/
 
@@ -67,15 +67,15 @@ La position des bulles peut être ajustée avec la souris.
 
 La touche Scroll Lock permet de masquer les bulles.
 
-🌐 Ajouter une nouvelle langue
+###🌐 Ajouter une nouvelle langue
 
 Dans languages.lua, ajoutez une entrée pour votre langue. Exemple :
 
 return {
     ["french"] = {name = "Français", code = "fr"}
 }
-🇬🇧 English Version
-✨ Features
+##🇬🇧 English Version
+###✨ Features
 
 NPC dialogue displayed as speech bubbles
 
@@ -95,7 +95,7 @@ Interface scaling
 
 Translation cache system (added in this fork)
 
-⚙️ Main Commands
+###⚙️ Main Commands
 //Bl             → Main command
 //Bl 0           → Normal mode (log only)
 //Bl 1           → Balloon display only
@@ -120,7 +120,7 @@ Reload the addon if the order is not respected.
 
 ⚠️ Warning: some Windower addons like Eternity (and probably FastCS) are not compatible with this version.
 
-🎨 Themes & Balloons
+###🎨 Themes & Balloons
 
 Themes are located in themes/
 
@@ -142,19 +142,17 @@ Bubble position adjustable with the mouse
 
 Scroll Lock hides bubbles
 
-🌐 Adding a New Language
+###🌐 Adding a New Language
 
 Add an entry in languages.lua. Example:
 
 ["french"] = {name = "Français", code = "fr"}
-📜 Crédits / Credits
+
+###📜 Crédits / Credits
 
 Original addon: Hando
-
 Major modifications: Yuki and Ghosty
-
 Improvements from fork: KenshiDRK
-
 Additional improvements in this fork: DiableNoir
 
 Original repository: https://github.com/StarlitGhost/Balloon.git
