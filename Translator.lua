@@ -101,7 +101,15 @@ end
 local function save_cache()
     local f = io.open(cache_file, "w+")
     if f then
-        f:write(json.encode(translation_cache))
+        local content = json.encode(translation_cache)
+
+        -- simple "pretty" sans lib externe
+        content = content:gsub("{", "{\n  ")
+        content = content:gsub("}", "\n}")
+        content = content:gsub('","', '",\n  "')
+        content = content:gsub("},", "},\n") -- retour à la ligne après les sous-tables
+
+        f:write(content)
         f:close()
     end
 end
@@ -114,11 +122,14 @@ end
 
 function get_translation(text, language)
 
-    local cache_key = language.code .. ":" .. text
+    -- Assure que la table de la langue existe
+    translation_cache[language.code] = translation_cache[language.code] or {}
 
-    if translation_cache[cache_key] then
-        return translation_cache[cache_key]
+    -- Vérifie si la phrase est déjà traduite pour cette langue
+    if translation_cache[language.code][text] then
+        return translation_cache[language.code][text]
     end
+
 
     local url = make_url(text, language.code)
     local response_body = {}
@@ -153,7 +164,7 @@ function get_translation(text, language)
     final_text = adjust_articles_for_plurals(final_text, language.articles)
     final_text = aply_fixes(final_text, language.code)
 
-    translation_cache[cache_key] = final_text
+    translation_cache[language.code][text] = final_text
     save_cache()
     return final_text
 end
