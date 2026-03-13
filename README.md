@@ -34,7 +34,7 @@ Ce projet est un fork amélioré du projet original avec des fonctionnalités su
 //Bl portrait    → Active/Désactive les portraits
 //Bl translate   → Active/Désactive la traduction automatique
 //Bl language <langue> → Change la langue de traduction (voir languages.lua)
-
+```
 Pour la traduction française avec ce fork :
 
 //Bl translate
@@ -156,3 +156,4 @@ Improvements from fork: KenshiDRK
 Additional improvements in this fork: DiableNoir
 
 Original repository: https://github.com/StarlitGhost/Balloon.git
+
