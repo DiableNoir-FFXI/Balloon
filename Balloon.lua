@@ -31,7 +31,7 @@
 -- SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ---
-_addon.author = 'Originally by Hando, English support added by Yuki & KenshiDRK, themes added by Ghosty, French & cache modifications by DiableNoir (last update 13 Mar 2026)'
+_addon.author = 'Hando (orig), Yuki/KenshiDRK (EN), Ghosty (themes), DiableNoir (FR/cache)'
 _addon.name = 'Balloon'
 _addon.version = '0.18.0'
 _addon.commands = {'balloon','bl'}
