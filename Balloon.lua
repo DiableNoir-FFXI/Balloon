@@ -33,7 +33,7 @@
 ---
 _addon.author = 'Hando (orig), Yuki/KenshiDRK (EN), Ghosty (themes), DiableNoir (FR/cache)'
 _addon.name = 'Balloon'
-_addon.version = '0.18.0'
+_addon.version = '0.19.0'
 _addon.commands = {'balloon','bl'}
 
 require('luau')
@@ -336,10 +336,10 @@ function process_balloon(npc_text, mode)
         local tries = 5
         if settings.Translation and v ~= "" then
             v = string.gsub(v, 'Forrr ', "For ")
-            local t = get_translation(v, language[settings.lang])
-            while t == nil and tries > 0 do
+            local t = get_translation(v, language[settings.lang], npc_name)
+                while t == nil and tries > 0 do
                 tries = tries - 1
-                t = get_translation(v, language[settings.lang])
+                t = get_translation(v, language[settings.lang], npc_name)
             end
             v = t ~= nil and t or v
         end
