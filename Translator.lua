@@ -61,15 +61,15 @@ end
 
 local no_translate = {}
 local function apply_colored_text(text)
-    local count = 0
+    local no_translate_local = {}
     local modified_text = text
-    for word in string.gmatch(text, "@%d%d%d%d(.-)@93537") do
+    local count = 0
+    for word in text:gmatch("@%d%d%d%d(.-)@93537") do
         count = count + 1
-        local escaped_word = escape_special_characters(word)
-        table.insert(no_translate, word)
-        modified_text = string.gsub(modified_text, escaped_word, " " .. count .. " ", 1)
+        table.insert(no_translate_local, word)
+        modified_text = modified_text:gsub(escape_special_characters(word), " " .. count .. " ", 1)
     end
-    return modified_text
+    return modified_text, no_translate_local
 end
 
 local function restore_colored_text(text)
@@ -121,7 +121,6 @@ local function save_cache(language_code)
     end
 end
 
-
 local function make_url(text, language)
     local modified_text = apply_colored_text(text)
     modified_text = apply_glossary(modified_text, glossary)
@@ -140,7 +139,6 @@ function get_translation(text, language, npc_name)
     if translation_cache[language.code][npc_name][text] then
         return translation_cache[language.code][npc_name][text]
     end
-
 
     local url = make_url(text, language.code)
     local response_body = {}
