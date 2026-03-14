@@ -1,5 +1,6 @@
 local json = require("json")
 local https = require("ssl.https")
+local ltn12 = require("ltn12")
 local url = require("socket.url")
 local glossary = require("glossary")
 local res = require("resources")
@@ -7,17 +8,24 @@ local plurals_list = res.items_grammar
 local fixes = require("fixes")
 https.TIMEOUT = 0.5
 
-local cache_file = windower.addon_path .. 'translation_cache.json'
+local function get_cache_file(language_code)
+    return windower.addon_path .. 'translation_cache_' .. language_code .. '.json'
+end
+
 local translation_cache = {}
 
--- Charger le cache depuis le fichier
-local f = io.open(cache_file, "r")
-if f then
-    local content = f:read("*all")
-    f:close()
-    if content and content ~= "" then
-        translation_cache = json.decode(content) or {}
+local function load_cache(language_code)
+    local cache_file = get_cache_file(language_code)
+    local cache = {}
+    local f = io.open(cache_file, "r")
+    if f then
+        local content = f:read("*all")
+        f:close()
+        if content and content ~= "" then
+            cache = json.decode(content) or {}
+        end
     end
+    return cache
 end
 
 local inverted_glossary = {}
@@ -85,7 +93,7 @@ local function adjust_articles_for_plurals(text, language)
     return text
 end
 
-local function aply_fixes(text, language)
+local function apply_fixes(text, language)
     if language then
         if fixes[language] then
             for wrong, fix in pairs(fixes[language]) do
@@ -98,21 +106,21 @@ local function aply_fixes(text, language)
     return text
 end
 
-local function save_cache()
+local function save_cache(language_code)
+    local cache_file = get_cache_file(language_code)
     local f = io.open(cache_file, "w+")
     if f then
-        local content = json.encode(translation_cache)
-
+        local content = json.encode(translation_cache[language_code] or {})
         -- simple "pretty" sans lib externe
         content = content:gsub("{", "{\n  ")
         content = content:gsub("}", "\n}")
         content = content:gsub('","', '",\n  "')
-        content = content:gsub("},", "},\n") -- retour à la ligne après les sous-tables
-
+        content = content:gsub("},", "},\n")
         f:write(content)
         f:close()
     end
 end
+
 
 local function make_url(text, language)
     local modified_text = apply_colored_text(text)
@@ -122,8 +130,8 @@ end
 
 function get_translation(text, language, npc_name)
 
-    -- Assure que la table de la langue existe
-    translation_cache[language.code] = translation_cache[language.code] or {}
+    -- Charger le cache pour cette langue si ce n'est pas déjà fait
+    translation_cache[language.code] = translation_cache[language.code] or load_cache(language.code)
 
     -- Assure que la table du NPC existe
     translation_cache[language.code][npc_name] = translation_cache[language.code][npc_name] or {}
@@ -165,9 +173,9 @@ function get_translation(text, language, npc_name)
     local final_text = restore_glossary(table.concat(output_table), inverted_glossary)
     final_text = restore_colored_text(final_text)
     final_text = adjust_articles_for_plurals(final_text, language.articles)
-    final_text = aply_fixes(final_text, language.code)
+    final_text = apply_fixes(final_text, language.code)
 
     translation_cache[language.code][npc_name][text] = final_text
-    save_cache()
+    save_cache(language.code)
     return final_text
 end
