@@ -120,14 +120,17 @@ local function make_url(text, language)
     return 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl='.. language ..'&dt=t&q='.. url.escape(modified_text)
 end
 
-function get_translation(text, language)
+function get_translation(text, language, npc_name)
 
     -- Assure que la table de la langue existe
     translation_cache[language.code] = translation_cache[language.code] or {}
 
-    -- Vérifie si la phrase est déjà traduite pour cette langue
-    if translation_cache[language.code][text] then
-        return translation_cache[language.code][text]
+    -- Assure que la table du NPC existe
+    translation_cache[language.code][npc_name] = translation_cache[language.code][npc_name] or {}
+
+    -- Vérifie si la phrase est déjà traduite pour ce NPC
+    if translation_cache[language.code][npc_name][text] then
+        return translation_cache[language.code][npc_name][text]
     end
 
 
@@ -164,7 +167,7 @@ function get_translation(text, language)
     final_text = adjust_articles_for_plurals(final_text, language.articles)
     final_text = aply_fixes(final_text, language.code)
 
-    translation_cache[language.code][text] = final_text
+    translation_cache[language.code][npc_name][text] = final_text
     save_cache()
     return final_text
 end
