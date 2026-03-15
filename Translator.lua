@@ -124,19 +124,28 @@ local function adjust_articles_for_plurals(text, language)
 end
 
 local function save_npc_cache(language_code, zone, npc, cache)
-
     ensure_folders(language_code, zone)
-
     local file = get_npc_cache_file(language_code, zone, npc)
-
     local f = io.open(file, "w+")
+    if not f then return end
 
-    if f then
-        cache._last_updated = os.time()
-        f:write(json.encode(cache))
-        f:close()
+    f:write("{\"_last_updated\":\"", os.date("!%Y-%m-%dT%H:%M:%SZ"), "\",\"translations\":{\n")
+
+    local first = true
+    for k, v in pairs(cache) do
+        if k ~= "_last_updated" then
+            if not first then
+                f:write(",\n")
+            end
+            first = false
+            local key = k:gsub('"', '\\"')
+            local val = v:gsub('"', '\\"')
+            f:write('  "', key, '":"', val, '"')
+        end
     end
 
+    f:write("\n}}\n")
+    f:close()
 end
 
 local function adaptive_request(request_url)
