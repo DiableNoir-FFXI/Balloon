@@ -6,6 +6,10 @@ local glossary = require("glossary")
 local res = require("resources")
 local plurals_list = res.items_grammar
 https.TIMEOUT = 0.5
+local adaptive_timeout = 0.5
+local MAX_TIMEOUT = 5
+local MARGIN = 0.2
+local MAX_RETRIES = 3
 
 local function get_zone_path(language_code, zone)
     return windower.addon_path .. "translations/" .. language_code .. "/" .. zone .. "/"
@@ -28,7 +32,8 @@ local function ensure_folders(language_code, zone)
 end
 
 local translation_cache = {}
-
+local translation_queue = {}
+local queue_running = false
 local function load_npc_cache(language_code, zone, npc)
 
     local file = get_npc_cache_file(language_code, zone, npc)
@@ -43,7 +48,10 @@ local function load_npc_cache(language_code, zone, npc)
     f:close()
 
     if content and content ~= "" then
-        return json.decode(content) or {}
+        local ok, data = pcall(json.decode, content)
+        if ok and data then
+            return data
+        end
     end
 
     return {}
@@ -80,24 +88,25 @@ local function restore_glossary(text, inverted_glossary)
     return text
 end
 
-local no_translate = {}
 local function apply_colored_text(text)
+    local no_translate = {}
     local count = 0
     local modified_text = text
+
     for word in string.gmatch(text, "@%d%d%d%d(.-)@93537") do
         count = count + 1
         local escaped_word = escape_special_characters(word)
         table.insert(no_translate, word)
         modified_text = string.gsub(modified_text, escaped_word, " " .. count .. " ", 1)
     end
-    return modified_text
+
+    return modified_text, no_translate
 end
 
-local function restore_colored_text(text)
+local function restore_colored_text(text, no_translate)
     for k = 1, #no_translate do
         text = string.gsub(text, " " .. k .. " %.?%s*", no_translate[k])
     end
-    no_translate = {}
     return text
 end
 
@@ -109,17 +118,6 @@ local function adjust_articles_for_plurals(text, language)
             local escaped_plural = escape_special_characters(plural)
             text = text:gsub(" " .. singular_articles.masc .. "%s+(@%d%d%d%d" .. escaped_plural .. "@93537)", " " .. plural_articles.masc .. " %1")
             text = text:gsub(" " .. singular_articles.fem .. "%s+(@%d%d%d%d" .. escaped_plural .. "@93537)", " " .. plural_articles.fem .. " %1")
-        end
-    end
-    return text
-end
-
-local function apply_fixes(text, language)
-    if language then
-        local fixes_table = {}  
-        for wrong, fix in pairs(fixes_table) do
-            wrong = escape_special_characters(wrong)
-            text = text:gsub(wrong, fix)
         end
     end
     return text
@@ -140,42 +138,82 @@ local function save_npc_cache(language_code, zone, npc, cache)
 
 end
 
+local function adaptive_request(request_url)
+    local tries = 0
+    while tries < MAX_RETRIES do
+        local start_time = os.clock()
+        local response_body = {}
+        https.TIMEOUT = adaptive_timeout
+
+        local success, status_code = https.request{
+            url = request_url,
+            sink = ltn12.sink.table(response_body)
+        }
+
+        local elapsed = os.clock() - start_time
+
+        local body = table.concat(response_body)
+
+        if success and status_code == 200 and body ~= "" then
+            adaptive_timeout = math.max(0.3, math.min(elapsed + MARGIN, MAX_TIMEOUT))
+            return table.concat(response_body)
+        else
+            adaptive_timeout = math.min(adaptive_timeout * 1.5, MAX_TIMEOUT)
+            tries = tries + 1
+            coroutine.yield()
+        end
+    end
+    return nil
+end
+
 local function make_url(text, language)
-    local modified_text = apply_colored_text(text)
+    local modified_text, colored_words = apply_colored_text(text)
     modified_text = apply_glossary(modified_text, glossary)
-    return 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl='.. language ..'&dt=t&q='.. url.escape(modified_text)
+
+    local GOOGLE_URL =
+    "https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&dt=t&tl="
+    local request_url = GOOGLE_URL .. language .. "&q=" .. url.escape(modified_text)
+    return request_url, colored_words
 end
 
 function get_translation(text, language, npc_name, zone)
 
-    translation_cache[language.code] = translation_cache[language.code] or {}
-    translation_cache[language.code][zone] = translation_cache[language.code][zone] or {}
-    translation_cache[language.code][zone][npc_name] = translation_cache[language.code][zone][npc_name] or load_npc_cache(language.code, zone, npc_name)
-
-    if translation_cache[language.code][zone][npc_name][text] then
-        return translation_cache[language.code][zone][npc_name][text]
-    end
-
-    local url = make_url(text, language.code)
-    local response_body = {}
-    local success, status_code, headers, status_text = https.request{
-        url = url,
-        sink = ltn12.sink.table(response_body)
-    }
-
-    if not success or status_code ~= 200 then
+    if not language or not language.code then
         return nil
     end
 
-    local reply = table.concat(response_body)
-    
+    local lang_cache = translation_cache[language.code]
+    if not lang_cache then
+        lang_cache = {}
+        translation_cache[language.code] = lang_cache
+    end
+
+    local zone_cache = lang_cache[zone]
+    if not zone_cache then
+        zone_cache = {}
+        lang_cache[zone] = zone_cache
+    end
+
+    local npc_cache = zone_cache[npc_name]
+    if not npc_cache then
+        npc_cache = load_npc_cache(language.code, zone, npc_name)
+        zone_cache[npc_name] = npc_cache
+    end
+
+    if npc_cache[text] then
+        return npc_cache[text]
+    end
+
+    local request_url, colored_words = make_url(text, language.code)
+    local reply = adaptive_request(request_url)
+
     if not reply then
         return nil
     end
-    
-    local data, decode_err = json.decode(reply)
 
-    if not data or decode_err then
+    local ok, data = pcall(json.decode, reply)
+
+    if not ok or not data then
         return nil
     end
 
@@ -185,11 +223,53 @@ function get_translation(text, language, npc_name, zone)
     end
 
     local final_text = restore_glossary(table.concat(output_table), inverted_glossary)
-    final_text = restore_colored_text(final_text)
+    final_text = restore_colored_text(final_text, colored_words)
     final_text = adjust_articles_for_plurals(final_text, language.articles)
-    final_text = apply_fixes(final_text, language.code)
 
-    translation_cache[language.code][zone][npc_name][text] = final_text
-    save_npc_cache(language.code, zone, npc_name, translation_cache[language.code][zone][npc_name])
+    npc_cache[text] = final_text
+    save_npc_cache(language.code, zone, npc_name, npc_cache)
+
     return final_text
+end
+
+local function process_translation_queue()
+    if queue_running then
+        return
+    end
+
+    queue_running = true
+
+    coroutine.wrap(function()
+        while #translation_queue > 0 do
+            local task = table.remove(translation_queue, 1)
+
+            local result = get_translation(
+                task.text,
+                task.language,
+                task.npc_name,
+                task.zone
+            )
+
+            if task.callback then
+                task.callback(result)
+            end
+            coroutine.yield()
+            coroutine.yield()
+        end
+
+        queue_running = false
+    end)()
+end
+
+function get_translation_async(text, language, npc_name, zone, callback)
+
+    table.insert(translation_queue, {
+        text = text,
+        language = language,
+        npc_name = npc_name,
+        zone = zone,
+        callback = callback
+    })
+
+    process_translation_queue()
 end
