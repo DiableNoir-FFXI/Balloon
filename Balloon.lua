@@ -7,7 +7,7 @@
 -- Copyright 2022, Ghosty
 -- All rights reserved.
 
--- Modifications et système de cache de traduction par Diable Noir (2026)
+-- Modifications et système de cache de traduction par DiableNoir (2026)
 -- Intégration Google Translate par KenshiDRK (2025)
 
 -- Redistribution and use in source and binary forms, with or without
