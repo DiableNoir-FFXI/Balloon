@@ -8,24 +8,46 @@ local plurals_list = res.items_grammar
 local fixes = require("fixes")
 https.TIMEOUT = 0.5
 
-local function get_cache_file(language_code)
-    return windower.addon_path .. 'translation_cache_' .. language_code .. '.json'
+local function get_zone_path(language_code, zone)
+    return windower.addon_path .. "translations/" .. language_code .. "/" .. zone .. "/"
+end
+
+local function get_npc_folder(language_code, zone)
+    return get_zone_path(language_code, zone) .. "npc/"
+end
+
+local function get_npc_cache_file(language_code, zone, npc)
+    return get_npc_folder(language_code, zone) .. npc .. ".json"
+end
+
+local function ensure_folders(language_code, zone)
+    local base = windower.addon_path .. "translations/"
+    windower.create_dir(base)
+    windower.create_dir(base .. language_code)
+    windower.create_dir(base .. language_code .. "/" .. zone)
+    windower.create_dir(base .. language_code .. "/" .. zone .. "/npc")
 end
 
 local translation_cache = {}
 
-local function load_cache(language_code)
-    local cache_file = get_cache_file(language_code)
-    local cache = {}
-    local f = io.open(cache_file, "r")
-    if f then
-        local content = f:read("*all")
-        f:close()
-        if content and content ~= "" then
-            cache = json.decode(content) or {}
-        end
+local function load_npc_cache(language_code, zone, npc)
+
+    local file = get_npc_cache_file(language_code, zone, npc)
+
+    local f = io.open(file, "r")
+
+    if not f then
+        return {}
     end
-    return cache
+
+    local content = f:read("*all")
+    f:close()
+
+    if content and content ~= "" then
+        return json.decode(content) or {}
+    end
+
+    return {}
 end
 
 local inverted_glossary = {}
@@ -106,19 +128,19 @@ local function apply_fixes(text, language)
     return text
 end
 
-local function save_cache(language_code)
-    local cache_file = get_cache_file(language_code)
-    local f = io.open(cache_file, "w+")
+local function save_npc_cache(language_code, zone, npc, cache)
+
+    ensure_folders(language_code, zone)
+
+    local file = get_npc_cache_file(language_code, zone, npc)
+
+    local f = io.open(file, "w+")
+
     if f then
-        local content = json.encode(translation_cache[language_code] or {})
-        -- simple "pretty" sans lib externe
-        content = content:gsub("{", "{\n  ")
-        content = content:gsub("}", "\n}")
-        content = content:gsub('","', '",\n  "')
-        content = content:gsub("},", "},\n")
-        f:write(content)
+        f:write(json.encode(cache))
         f:close()
     end
+
 end
 
 local function make_url(text, language)
@@ -127,17 +149,14 @@ local function make_url(text, language)
     return 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl='.. language ..'&dt=t&q='.. url.escape(modified_text)
 end
 
-function get_translation(text, language, npc_name)
+function get_translation(text, language, npc_name, zone)
 
-    -- Charger le cache pour cette langue si ce n'est pas déjà fait
-    translation_cache[language.code] = translation_cache[language.code] or load_cache(language.code)
+    translation_cache[language.code] = translation_cache[language.code] or {}
+    translation_cache[language.code][zone] = translation_cache[language.code][zone] or {}
+    translation_cache[language.code][zone][npc_name] = translation_cache[language.code][zone][npc_name] or load_npc_cache(language.code, zone, npc_name)
 
-    -- Assure que la table du NPC existe
-    translation_cache[language.code][npc_name] = translation_cache[language.code][npc_name] or {}
-
-    -- Vérifie si la phrase est déjà traduite pour ce NPC
-    if translation_cache[language.code][npc_name][text] then
-        return translation_cache[language.code][npc_name][text]
+    if translation_cache[language.code][zone][npc_name][text] then
+        return translation_cache[language.code][zone][npc_name][text]
     end
 
     local url = make_url(text, language.code)
@@ -173,7 +192,7 @@ function get_translation(text, language, npc_name)
     final_text = adjust_articles_for_plurals(final_text, language.articles)
     final_text = apply_fixes(final_text, language.code)
 
-    translation_cache[language.code][npc_name][text] = final_text
-    save_cache(language.code)
+    translation_cache[language.code][zone][npc_name][text] = final_text
+    save_npc_cache(language.code, zone, npc_name, translation_cache[language.code][zone][npc_name])
     return final_text
 end
