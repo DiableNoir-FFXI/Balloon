@@ -6,7 +6,7 @@ local glossary = require("glossary")
 local res = require("resources")
 local plurals_list = res.items_grammar
 https.TIMEOUT = 0.5
-local adaptive_timeout = 0.5
+local adaptive_timeout = 0.3
 local MAX_TIMEOUT = 5
 local MARGIN = 0.2
 local MAX_RETRIES = 3
@@ -93,11 +93,11 @@ local function apply_colored_text(text)
     local count = 0
     local modified_text = text
 
-    for word in string.gmatch(text, "@%d%d%d%d(.-)@93537") do
+    for word in string.gmatch(text, "@%d+.-@93537") do
         count = count + 1
         local escaped_word = escape_special_characters(word)
         table.insert(no_translate, word)
-        modified_text = string.gsub(modified_text, escaped_word, " " .. count .. " ", 1)
+        modified_text = string.gsub(modified_text, escaped_word, "__CT_" .. count .. "__", 1)
     end
 
     return modified_text, no_translate
@@ -105,7 +105,7 @@ end
 
 local function restore_colored_text(text, no_translate)
     for k = 1, #no_translate do
-        text = string.gsub(text, " " .. k .. " %.?%s*", no_translate[k])
+        text = string.gsub(text, "__CT_" .. k .. "__", no_translate[k])
     end
     return text
 end
@@ -156,10 +156,10 @@ local function adaptive_request(request_url)
         local body = table.concat(response_body)
 
         if success and status_code == 200 and body ~= "" then
-            adaptive_timeout = math.max(0.3, math.min(elapsed + MARGIN, MAX_TIMEOUT))
+            adaptive_timeout = math.max(0.2, math.min(elapsed + MARGIN, MAX_TIMEOUT))
             return table.concat(response_body)
         else
-            adaptive_timeout = math.min(adaptive_timeout * (1.5 + math.random() * 0.5), MAX_TIMEOUT)
+            adaptive_timeout = math.min(adaptive_timeout * (1.3 + math.random() * 0.4), MAX_TIMEOUT)
             tries = tries + 1
             coroutine.yield()
         end
@@ -209,13 +209,11 @@ function get_translation(text, language, npc_name, zone)
     local reply = adaptive_request(request_url)
 
     if not reply then
-        print("[Translation ERROR] Échec de la requête pour :", text)
         return nil
     end
 
     local ok, data = pcall(json.decode, reply)
     if not ok or not data then
-        print("[Translation ERROR] JSON invalide pour :", text)
         return nil
     end
 
