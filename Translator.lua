@@ -34,6 +34,8 @@ end
 local translation_cache = {}
 local translation_queue = {}
 local queue_running = false
+local last_request = 0
+local REQUEST_DELAY = 0.15
 local function load_npc_cache(language_code, zone, npc)
 
     local file = get_npc_cache_file(language_code, zone, npc)
@@ -49,8 +51,8 @@ local function load_npc_cache(language_code, zone, npc)
 
     if content and content ~= "" then
         local ok, data = pcall(json.decode, content)
-        if ok and data then
-            return data
+        if ok and data and data.translations then
+            return data.translations
         end
     end
 
@@ -68,19 +70,23 @@ for _, item in pairs(plurals_list) do
 end
 
 local function escape_special_characters(phrase)
-    local special_characters = "%%%^%$%(%)%.%[%]%*%+%-%?%'/%-"
+    local special_characters = "%%%^%$%(%)%.%[%]%*%+%-%?%'%/"
     return (phrase:gsub("([" .. special_characters .. "])", "%%%1"))
 end
 
 local function apply_glossary(text, glossary)
+    text = text or ""
     for phrase, replacement in pairs(glossary) do
         local escaped_phrase = escape_special_characters(phrase)
-        text = text:gsub(escaped_phrase, replacement)
+        text = text:gsub(escaped_phrase, function()
+            return replacement
+        end)
     end
     return text
 end
 
 local function restore_glossary(text, inverted_glossary)
+        text = text or ""
     for replacement, original in pairs(inverted_glossary) do
         local escaped_replacement = escape_special_characters(replacement)
         text = string.gsub(text, escaped_replacement, original)
@@ -93,7 +99,7 @@ local function apply_colored_text(text)
     local count = 0
     local modified_text = text
 
-    for word in string.gmatch(text, "@%d+.-@93537") do
+    for word in text:gmatch("@%d+.-@93537") do
         count = count + 1
         local escaped_word = escape_special_characters(word)
         table.insert(no_translate, word)
@@ -104,6 +110,7 @@ local function apply_colored_text(text)
 end
 
 local function restore_colored_text(text, no_translate)
+        text = text or ""
     for k = 1, #no_translate do
         text = string.gsub(text, "__CT_" .. k .. "__", no_translate[k])
     end
@@ -111,15 +118,27 @@ local function restore_colored_text(text, no_translate)
 end
 
 local function adjust_articles_for_plurals(text, language)
-    if language then
+    text = text or ""
+
+    if language and language.singular and language.plural then
         local singular_articles = language.singular
         local plural_articles = language.plural
+
         for plural in pairs(plurals_dict) do
             local escaped_plural = escape_special_characters(plural)
-            text = text:gsub(" " .. singular_articles.masc .. "%s+(@%d%d%d%d" .. escaped_plural .. "@93537)", " " .. plural_articles.masc .. " %1")
-            text = text:gsub(" " .. singular_articles.fem .. "%s+(@%d%d%d%d" .. escaped_plural .. "@93537)", " " .. plural_articles.fem .. " %1")
+
+            text = text:gsub(
+                " " .. singular_articles.masc .. "%s+(@%d%d%d%d" .. escaped_plural .. "@93537)",
+                " " .. plural_articles.masc .. " %1"
+            )
+
+            text = text:gsub(
+                " " .. singular_articles.fem .. "%s+(@%d%d%d%d" .. escaped_plural .. "@93537)",
+                " " .. plural_articles.fem .. " %1"
+            )
         end
     end
+
     return text
 end
 
@@ -138,8 +157,8 @@ local function save_npc_cache(language_code, zone, npc, cache)
                 f:write(",\n")
             end
             first = false
-            local key = k:gsub('"', '\\"')
-            local val = v:gsub('"', '\\"')
+            local key = tostring(k):gsub('"', '\\"')
+            local val = tostring(v):gsub('"', '\\"')
             f:write('  "', key, '":"', val, '"')
         end
     end
@@ -170,7 +189,6 @@ local function adaptive_request(request_url)
         else
             adaptive_timeout = math.min(adaptive_timeout * (1.3 + math.random() * 0.4), MAX_TIMEOUT)
             tries = tries + 1
-            coroutine.yield()
         end
     end
     return nil
@@ -182,7 +200,7 @@ local function make_url(text, language)
 
     local GOOGLE_URL =
     "https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&dt=t&tl="
-    local request_url = GOOGLE_URL .. language .. "&q=" .. url.escape(modified_text)
+    local request_url = GOOGLE_URL .. language .. "&ie=UTF-8&oe=UTF-8&q=" .. url.escape(modified_text)
     return request_url, colored_words
 end
 
@@ -232,7 +250,9 @@ function get_translation(text, language, npc_name, zone)
     end
 
     local final_text = restore_glossary(table.concat(output_table), inverted_glossary)
+
     final_text = restore_colored_text(final_text, colored_words)
+
     final_text = adjust_articles_for_plurals(final_text, language.articles)
 
     npc_cache[text] = final_text
@@ -242,32 +262,48 @@ function get_translation(text, language, npc_name, zone)
 end
 
 local function process_translation_queue()
-    if queue_running then
+
+    if #translation_queue == 0 or queue_running then
         return
     end
 
+    if os.clock() - last_request < REQUEST_DELAY then
+        return
+    end
+
+    last_request = os.clock()
+
     queue_running = true
 
-    coroutine.wrap(function()
-        while #translation_queue > 0 do
-            local task = table.remove(translation_queue, 1)
+    local task = table.remove(translation_queue, 1)
 
-            local result = get_translation(
-                task.text,
-                task.language,
-                task.npc_name,
-                task.zone
-            )
-
+    local lang_cache = translation_cache[task.language.code]
+    if lang_cache and lang_cache[task.zone] and lang_cache[task.zone][task.npc_name] then
+        local npc_cache = lang_cache[task.zone][task.npc_name]
+        if npc_cache[task.text] then
             if task.callback then
-                task.callback(result)
+                task.callback(npc_cache[task.text])
             end
-            coroutine.yield()
+            queue_running = false
+            return
         end
+    end
 
-        queue_running = false
-    end)()
+    local result = get_translation(
+        task.text,
+        task.language,
+        task.npc_name,
+        task.zone
+    )
+
+    if task.callback then
+        task.callback(result)
+    end
+
+    queue_running = false
 end
+
+windower.register_event("prerender", process_translation_queue)
 
 function get_translation_async(text, language, npc_name, zone, callback)
 
@@ -278,6 +314,4 @@ function get_translation_async(text, language, npc_name, zone, callback)
         zone = zone,
         callback = callback
     })
-
-    process_translation_queue()
 end
