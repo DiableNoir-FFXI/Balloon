@@ -36,7 +36,7 @@
 ---
 _addon.author = 'Hando (original), Yuki/KenshiDRK (English), Ghosty (themes), Diable Noir (French & cache), KenshiDRK (Google Translate)'
 _addon.name = 'Balloon'
-_addon.version = '0.22.1'
+_addon.version = '0.22.2'
 _addon.commands = {'balloon','bl'}
 
 require('luau')
@@ -261,17 +261,23 @@ function process_balloon(npc_text, mode)
         timed = false
     end
 
-    -- 発言者名の抽出 (Speaker name extraction)
+    -- Speaker name extraction (avant traduction)
     local start,_end = npc_text:find(".- : ")
     local npc_prefix = ""
-    if start ~= nil then
-        if _end < 32 and start > 0 then npc_prefix = npc_text:sub(start,_end) end
-    end
-    local npc_name = npc_prefix:sub(0,#npc_prefix-2)
-    npc_name = npc_name:gsub("[^%w%s%-]", "")
+    local npc_name = ""
 
-    if not ui:set_character(npc_name) then
-        ui:set_type(mode)
+    if start ~= nil and _end ~= nil then
+        npc_prefix = npc_text:sub(start,_end)
+        npc_name = npc_prefix:sub(1, #npc_prefix-2) -- supprime juste " : "
+        npc_name = npc_name:gsub("^%s+", "")         -- supprime espaces au début
+        npc_name = npc_name:gsub("%s+$", "")         -- supprime espaces à la fin
+    end
+
+    -- Affiche le portrait seulement si l’option est activée
+    if settings.ShowPortraits and npc_name ~= "" then
+        if not ui:set_character(npc_name) then
+            ui:set_type(mode)
+        end
     end
 
     -- mode 1, blank log lines and visible balloon
