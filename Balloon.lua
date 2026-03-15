@@ -7,6 +7,9 @@
 -- Copyright 2022, Ghosty
 -- All rights reserved.
 
+-- Modifications et système de cache de traduction par Diable Noir (2025)
+-- Intégration Google Translate par KenshiDRK (2025)
+
 -- Redistribution and use in source and binary forms, with or without
 -- modification, are permitted provided that the following conditions are met:
 
@@ -31,9 +34,9 @@
 -- SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ---
-_addon.author = 'Hando (orig), Yuki/KenshiDRK (EN), Ghosty (themes), DiableNoir (FR/cache)'
+_addon.author = 'Hando (original), Yuki/KenshiDRK (English), Ghosty (themes), Diable Noir (French & cache), KenshiDRK (Google Translate)'
 _addon.name = 'Balloon'
-_addon.version = '0.20.1'
+_addon.version = '0.21.0'
 _addon.commands = {'balloon','bl'}
 
 require('luau')
@@ -265,7 +268,7 @@ function process_balloon(npc_text, mode)
         if _end < 32 and start > 0 then npc_prefix = npc_text:sub(start,_end) end
     end
     local npc_name = npc_prefix:sub(0,#npc_prefix-2)
-    npc_name = string.trim(npc_name)
+    npc_name = npc_name:gsub("[^%w%s%-]", "")
 
     if not ui:set_character(npc_name) then
         ui:set_type(mode)
@@ -336,11 +339,18 @@ function process_balloon(npc_text, mode)
         local tries = 5
         if settings.Translation and v ~= "" then
             v = string.gsub(v, 'Forrr ', "For ")
-            local t = get_translation(v, language[settings.lang], npc_name)
-                while t == nil and tries > 0 do
+
+            local zone_id = windower.ffxi.get_info().zone
+            local res = require('resources')
+            local zone_name = res.zones[zone_id].english
+
+            local t = get_translation(v, language[settings.lang], npc_name, zone_name)
+
+            while t == nil and tries > 0 do
                 tries = tries - 1
-                t = get_translation(v, language[settings.lang], npc_name)
+                t = get_translation(v, language[settings.lang], npc_name, zone_name)
             end
+
             v = t ~= nil and t or v
         end
         
