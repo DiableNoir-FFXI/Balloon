@@ -36,7 +36,7 @@
 ---
 _addon.author = 'Hando (original), Yuki/KenshiDRK (English), Ghosty (themes), Diable Noir (French & cache), KenshiDRK (Google Translate)'
 _addon.name = 'Balloon'
-_addon.version = '0.21.0'
+_addon.version = '0.21.1'
 _addon.commands = {'balloon','bl'}
 
 require('luau')
