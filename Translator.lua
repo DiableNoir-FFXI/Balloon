@@ -5,7 +5,6 @@ local url = require("socket.url")
 local glossary = require("glossary")
 local res = require("resources")
 local plurals_list = res.items_grammar
-local fixes = require("fixes")
 https.TIMEOUT = 0.5
 
 local function get_zone_path(language_code, zone)
