@@ -68,7 +68,7 @@ for _, item in pairs(plurals_list) do
 end
 
 local function escape_special_characters(phrase)
-    local special_characters = "%%%^%$%(%)%.%[%]%*%+%-%?%'"
+    local special_characters = "%%%^%$%(%)%.%[%]%*%+%-%?%'/%-"
     return (phrase:gsub("([" .. special_characters .. "])", "%%%1"))
 end
 
@@ -132,6 +132,7 @@ local function save_npc_cache(language_code, zone, npc, cache)
     local f = io.open(file, "w+")
 
     if f then
+        cache._last_updated = os.time()
         f:write(json.encode(cache))
         f:close()
     end
@@ -158,7 +159,7 @@ local function adaptive_request(request_url)
             adaptive_timeout = math.max(0.3, math.min(elapsed + MARGIN, MAX_TIMEOUT))
             return table.concat(response_body)
         else
-            adaptive_timeout = math.min(adaptive_timeout * 1.5, MAX_TIMEOUT)
+            adaptive_timeout = math.min(adaptive_timeout * (1.5 + math.random() * 0.5), MAX_TIMEOUT)
             tries = tries + 1
             coroutine.yield()
         end
@@ -208,12 +209,13 @@ function get_translation(text, language, npc_name, zone)
     local reply = adaptive_request(request_url)
 
     if not reply then
+        print("[Translation ERROR] Échec de la requête pour :", text)
         return nil
     end
 
     local ok, data = pcall(json.decode, reply)
-
     if not ok or not data then
+        print("[Translation ERROR] JSON invalide pour :", text)
         return nil
     end
 
@@ -253,7 +255,6 @@ local function process_translation_queue()
             if task.callback then
                 task.callback(result)
             end
-            coroutine.yield()
             coroutine.yield()
         end
 
