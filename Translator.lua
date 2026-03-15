@@ -116,12 +116,10 @@ end
 
 local function apply_fixes(text, language)
     if language then
-        if fixes[language] then
-            for wrong, fix in pairs(fixes[language]) do
-                wrong = escape_special_characters(wrong)
-                text = text:gsub(wrong, fix)
-            end
-            return text
+        local fixes_table = {}  
+        for wrong, fix in pairs(fixes_table) do
+            wrong = escape_special_characters(wrong)
+            text = text:gsub(wrong, fix)
         end
     end
     return text
